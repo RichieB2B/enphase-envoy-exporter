@@ -33,6 +33,7 @@ ENDPOINT_URL_PRODUCTION = "http{}://{}/production"
 ENDPOINT_URL_CHECK_JWT = "https://{}/auth/check_jwt"
 ENDPOINT_URL_ENSEMBLE_INVENTORY = "http{}://{}/ivp/ensemble/inventory"
 ENDPOINT_URL_PEB_DEVSTATUS = "http{}://{}/ivp/peb/devstatus"
+ENDPOINT_URL_PCU_COMM_CHECK = "http{}://{}/installer/pcu_comm_check"
 ENDPOINT_URL_HOME_JSON = "http{}://{}/home.json"
 
 # pylint: disable=pointless-string-statement
@@ -139,6 +140,15 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
 
     async def _update(self):
         """Update the data."""
+
+        # Force comm check otherwise data is only updated every 15 minutes
+        formatted_url = ENDPOINT_URL_PCU_COMM_CHECK.format(self.https_flag, self.host)
+        response = await self._async_fetch_with_retry(
+            formatted_url, follow_redirects=False
+        )
+        if response.status_code != 200:
+            _LOGGER.warning(f'pcu_comm_check returned {response.status_code}: {response.text}')
+
         if self.endpoint_type == ENVOY_MODEL_S:
             await self._update_from_pc_endpoint()
         if self.endpoint_type == ENVOY_MODEL_C or (
