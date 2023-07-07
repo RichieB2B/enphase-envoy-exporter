@@ -32,6 +32,7 @@ ENDPOINT_URL_PRODUCTION_INVERTERS = "http{}://{}/api/v1/production/inverters"
 ENDPOINT_URL_PRODUCTION = "http{}://{}/production"
 ENDPOINT_URL_CHECK_JWT = "https://{}/auth/check_jwt"
 ENDPOINT_URL_ENSEMBLE_INVENTORY = "http{}://{}/ivp/ensemble/inventory"
+ENDPOINT_URL_PEB_DEVSTATUS = "http{}://{}/ivp/peb/devstatus"
 ENDPOINT_URL_HOME_JSON = "http{}://{}/home.json"
 
 # pylint: disable=pointless-string-statement
@@ -40,7 +41,7 @@ ENVOY_MODEL_S = "PC"
 ENVOY_MODEL_C = "P"
 ENVOY_MODEL_LEGACY = "P0"
 
-LOGIN_URL = "https://entrez.enphaseenergy.com/login_main_page"
+LOGIN_URL = "https://entrez.enphaseenergy.com/login"
 TOKEN_URL = "https://entrez.enphaseenergy.com/entrez_tokens"
 
 # paths for the enlighten 6 month owner token
@@ -113,6 +114,7 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
         self.endpoint_production_inverters = None
         self.endpoint_production_results = None
         self.endpoint_ensemble_json_results = None
+        self.endpoint_devstatus_json_results = None
         self.endpoint_home_json_results = None
         self.isMeteringEnabled = False  # pylint: disable=invalid-name
         self._async_client = async_client
@@ -160,6 +162,9 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
             "endpoint_ensemble_json_results", ENDPOINT_URL_ENSEMBLE_INVENTORY
         )
         await self._update_endpoint(
+            "endpoint_devstatus_json_results", ENDPOINT_URL_PEB_DEVSTATUS
+        )
+        await self._update_endpoint(
             "endpoint_home_json_results", ENDPOINT_URL_HOME_JSON
         )
 
@@ -192,6 +197,8 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
                 url,
                 self._authorization_header,
             )
+            if self._cookies:
+                _LOGGER.debug(f'sessionId = {self._cookies.get("sessionId")}')
             try:
                 async with self.async_client as client:
                     resp = await client.get(
