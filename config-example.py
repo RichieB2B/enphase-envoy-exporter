@@ -1,9 +1,11 @@
 # envoy-s host IP
 host = '10.1.2.3'
-# envoy installer password
-password = 'secret'
-# envoy username
-user = 'installer'
+
+# enlighten data
+enlighten_user = 'me@example.com'
+enlighten_pass = 'very-secret'
+enlighten_site_id = '1234567'
+enlighten_serial_num = '123456789012'
 
 # adds 'array' label to each reading
 arrays = {

@@ -1,33 +1,27 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
 import sys
 import time
 import json
-import requests
-from requests.auth import HTTPDigestAuth
-from requests.exceptions import ReadTimeout, ConnectTimeout
-from urllib3 import disable_warnings
-from urllib3.exceptions import NewConnectionError, MaxRetryError, InsecureRequestWarning
 import prometheus_client as prom
+import logging
+import asyncio
+import argparse
+
+# local imports
+from envoy_reader import EnvoyReader
 import config
 
-disable_warnings(InsecureRequestWarning)
-
-auth = HTTPDigestAuth(config.user, config.password)
-
-def readEnvoy(url):
-  try:
-    result = requests.get(url, auth=auth, verify=False, timeout=5)
-  except (ReadTimeout, ConnectTimeout, NewConnectionError, MaxRetryError) as e:
-    return {}
-  try:
-    data = result.json()
-  except Exception as e:
-    if not 'The page you tried to view does not exist' in result.text:
-      print(f'{type(e).__name__}: {str(e)}')
-    return {}
-  return data
-
 if __name__ == '__main__':
+  parser = argparse.ArgumentParser('Enphase Envoy Exporter')
+  parser.add_argument('-d', '--debug', action='store_true')
+  parser.add_argument('-p', '--port', type=int, default=8085)
+  args = parser.parse_args()
+  if args.debug:
+    level=logging.DEBUG
+  else:
+    level=logging.INFO
+  logging.basicConfig(level=level)
+
   envoy_power         = prom.Gauge('envoy_power'              , 'Power in Watt', unit='watts')
   envoy_production    = prom.Counter('envoy_production'       , 'Production in Wh', unit='whs')
   envoy_active        = prom.Gauge('envoy_active'             , 'Number of active inverters', unit='count')
@@ -36,17 +30,31 @@ if __name__ == '__main__':
   inverter_lastreport = prom.Gauge('envoy_inverter_lastreport', 'Time in epoch', ['serialnumber', 'array'])
   updated             = prom.Gauge('envoy_updated'            , 'Envoy client last updated')
   up                  = prom.Gauge('envoy_up'                 , 'Envoy client status')
-  prom.start_http_server(8085)
+  prom.start_http_server(args.port)
 
+  # Initialize EnvoyReader
+  ER = EnvoyReader(
+    host = config.host,
+    https_flag = 's',
+    enlighten_user = config.enlighten_user,
+    enlighten_pass = config.enlighten_pass,
+    enlighten_site_id = config.enlighten_site_id,
+    enlighten_serial_num = config.enlighten_serial_num,
+    commissioned=True,
+    use_enlighten_owner_token=True,
+    inverters=True,
+  )
   while True:
     dataReceived = False
-    # Force comm check otherwise data is only updated every 15 minutes
-    readEnvoy(f'https://{config.host}/installer/pcu_comm_check')
+    # Update Envoy data endpoints
+    asyncio.run(ER.getData())
     # Get general production data
-    data = readEnvoy(f'https://{config.host}/production.json')
+    data = ER.endpoint_production_json_results.json()
     prod = data.get('production',[])
+    logging.debug(f'prod = {prod}')
     p = {}
     for i in prod:
+      logging.debug(f'i = {i}')
       if i.get('type') == 'inverters':
         p = i
     if p:
@@ -59,7 +67,7 @@ if __name__ == '__main__':
         envoy_active.set(p['activeCount'])
         envoy_readingtime.set(p['readingTime'])
     # Get inverter production data
-    data = readEnvoy(f'https://{config.host}/api/v1/production/inverters')
+    data = ER.endpoint_production_inverters.json()
     if data:
       dataReceived = True
       up.set(1)
