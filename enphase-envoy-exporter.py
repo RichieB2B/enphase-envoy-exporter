@@ -27,6 +27,11 @@ if __name__ == '__main__':
   envoy_active        = prom.Gauge('envoy_active'             , 'Number of active inverters', unit='count')
   envoy_readingtime   = prom.Gauge('envoy_readingtime'        , 'Time of reading')
   inverter_power      = prom.Gauge('envoy_inverter_power'     , 'Power in Watt', ['serialnumber', 'array', 'type'], unit='watts')
+  inverter_ac_power   = prom.Gauge('envoy_inverter_ac_power'  , 'Power in Watt', ['serialnumber', 'array'], unit='watts')
+  inverter_ac_voltage = prom.Gauge('envoy_inverter_ac_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
+  inverter_dc_voltage = prom.Gauge('envoy_inverter_dc_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
+  inverter_dc_current = prom.Gauge('envoy_inverter_dc_current', 'Current in Ampere', ['serialnumber', 'array'], unit='ampere')
+  inverter_temperature= prom.Gauge('envoy_inverter_temperature','Temperature in Celsius', ['serialnumber', 'array'], unit='celsius')
   inverter_lastreport = prom.Gauge('envoy_inverter_lastreport', 'Time in epoch', ['serialnumber', 'array'])
   updated             = prom.Gauge('envoy_updated'            , 'Envoy client last updated')
   up                  = prom.Gauge('envoy_up'                 , 'Envoy client status')
@@ -41,7 +46,7 @@ if __name__ == '__main__':
     enlighten_site_id = config.enlighten_site_id,
     enlighten_serial_num = config.enlighten_serial_num,
     commissioned=True,
-    use_enlighten_owner_token=True,
+    use_enlighten_owner_token=False,
     inverters=True,
   )
   while True:
@@ -84,6 +89,22 @@ if __name__ == '__main__':
           inverter_power.labels(i['serialNumber'], array, 'last').set(i['lastReportWatts'])
           inverter_power.labels(i['serialNumber'], array, 'max').set(i['maxReportWatts'])
           inverter_lastreport.labels(i['serialNumber'], array).set(i['lastReportDate'])
+    # Get inverter device status
+    logging.debug(f'devstatus = {ER.endpoint_devstatus_json_results}')
+    data = ER.endpoint_devstatus_json_results.json()
+    if data:
+      dataReceived = True
+      up.set(1)
+      updated.set(time.time())
+      values = data.get('pcu',{}).get('values',[])
+      for v in values:
+        logging.debug(f'devstatus value = {v}')
+        array = config.arrays.get(v[0], 'unknown')
+        inverter_temperature.labels(v[0], array).set(v[6])
+        inverter_dc_voltage.labels(v[0], array).set(v[7]/1000.0)
+        inverter_dc_current.labels(v[0], array).set(v[8]/1000.0)
+        inverter_ac_voltage.labels(v[0], array).set(v[9]/1000.0)
+        inverter_ac_power.labels(v[0], array).set(v[10])
     if not dataReceived:
       up.set(0)
 
