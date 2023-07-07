@@ -49,7 +49,10 @@ if __name__ == '__main__':
     # Update Envoy data endpoints
     asyncio.run(ER.getData())
     # Get general production data
-    data = ER.endpoint_production_json_results.json()
+    try:
+      data = ER.endpoint_production_json_results.json()
+    except JSONDecodeError:
+      data = {}
     prod = data.get('production',[])
     logging.debug(f'prod = {prod}')
     p = {}
@@ -67,7 +70,10 @@ if __name__ == '__main__':
         envoy_active.set(p['activeCount'])
         envoy_readingtime.set(p['readingTime'])
     # Get inverter production data
-    data = ER.endpoint_production_inverters.json()
+    try:
+      data = ER.endpoint_production_inverters.json()
+    except JSONDecodeError:
+      data = {}
     if data:
       dataReceived = True
       up.set(1)
