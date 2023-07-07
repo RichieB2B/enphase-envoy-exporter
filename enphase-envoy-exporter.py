@@ -4,7 +4,7 @@ import time
 import json
 import requests
 from requests.auth import HTTPDigestAuth
-from requests.exceptions import ReadTimeout
+from requests.exceptions import ReadTimeout, ConnectTimeout
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 import prometheus_client as prom
 import config
@@ -13,8 +13,8 @@ auth = HTTPDigestAuth(config.user, config.password)
 
 def readEnvoy(url):
   try:
-    result = requests.get(url, auth=auth, timeout=5)
-  except (ReadTimeout, NewConnectionError, MaxRetryError) as e:
+    result = requests.get(url, auth=auth, verify=False, timeout=5)
+  except (ReadTimeout, ConnectTimeout, NewConnectionError, MaxRetryError) as e:
     return {}
   try:
     data = result.json()
@@ -38,9 +38,9 @@ if __name__ == '__main__':
   while True:
     dataReceived = False
     # Force comm check otherwise data is only updated every 15 minutes
-    readEnvoy(f'http://{config.host}/installer/pcu_comm_check')
+    readEnvoy(f'https://{config.host}/installer/pcu_comm_check')
     # Get general production data
-    data = readEnvoy(f'http://{config.host}/production.json')
+    data = readEnvoy(f'https://{config.host}/production.json')
     prod = data.get('production',[])
     p = {}
     for i in prod:
@@ -56,7 +56,7 @@ if __name__ == '__main__':
         envoy_active.set(p['activeCount'])
         envoy_readingtime.set(p['readingTime'])
     # Get inverter production data
-    data = readEnvoy(f'http://{config.host}/api/v1/production/inverters')
+    data = readEnvoy(f'https://{config.host}/api/v1/production/inverters')
     if data:
       dataReceived = True
       up.set(1)
