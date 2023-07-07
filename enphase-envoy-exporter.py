@@ -5,9 +5,12 @@ import json
 import requests
 from requests.auth import HTTPDigestAuth
 from requests.exceptions import ReadTimeout, ConnectTimeout
-from urllib3.exceptions import NewConnectionError, MaxRetryError
+from urllib3 import disable_warnings
+from urllib3.exceptions import NewConnectionError, MaxRetryError, InsecureRequestWarning
 import prometheus_client as prom
 import config
+
+disable_warnings(InsecureRequestWarning)
 
 auth = HTTPDigestAuth(config.user, config.password)
 
