@@ -292,7 +292,7 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
             time_left_days = (token_json["expires_at"] - time.time())/(24*3600)
             _LOGGER.debug("Commissioned Token valid for %s days", time_left_days)
 
-        elif self.commissioned == "True" or self.commissioned == "Commissioned":
+        elif self.commissioned == True or self.commissioned == "True" or self.commissioned == "Commissioned":
             # Login to website and store cookie
             resp = await self._async_post(LOGIN_URL, data=payload_login)
             payload_token = {
