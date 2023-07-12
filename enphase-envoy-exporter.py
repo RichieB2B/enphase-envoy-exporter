@@ -81,14 +81,26 @@ if __name__ == '__main__':
       data = {}
     if data:
       dataReceived = True
+      now = time.time()
       up.set(1)
-      updated.set(time.time())
+      updated.set(now)
       for i in data:
         if i.keys() >= {'serialNumber','lastReportDate','lastReportWatts','maxReportWatts'}:
           array = config.arrays.get(i['serialNumber'], 'unknown')
-          inverter_power.labels(i['serialNumber'], array, 'last').set(i['lastReportWatts'])
-          inverter_power.labels(i['serialNumber'], array, 'max').set(i['maxReportWatts'])
           inverter_lastreport.labels(i['serialNumber'], array).set(i['lastReportDate'])
+          if now - i['lastReportDate'] < 1800:
+            inverter_power.labels(i['serialNumber'], array, 'last').set(i['lastReportWatts'])
+            inverter_power.labels(i['serialNumber'], array, 'max').set(i['maxReportWatts'])
+          else:
+            # old data, remove metrics
+            try:
+              inverter_power.remove(i['serialNumber'], array, 'last')
+            except KeyError:
+              pass
+            try:
+              inverter_power.remove(i['serialNumber'], array, 'max')
+            except KeyError:
+              pass
     # Get inverter device status
     logging.debug(f'devstatus = {ER.endpoint_devstatus_json_results}')
     data = ER.endpoint_devstatus_json_results.json()
@@ -100,11 +112,34 @@ if __name__ == '__main__':
       for v in values:
         logging.debug(f'devstatus value = {v}')
         array = config.arrays.get(v[0], 'unknown')
-        inverter_temperature.labels(v[0], array).set(v[6])
-        inverter_dc_voltage.labels(v[0], array).set(v[7]/1000.0)
-        inverter_dc_current.labels(v[0], array).set(v[8]/1000.0)
-        inverter_ac_voltage.labels(v[0], array).set(v[9]/1000.0)
-        inverter_ac_power.labels(v[0], array).set(v[10])
+        if now - v[5] < 1800:
+          inverter_temperature.labels(v[0], array).set(v[6])
+          inverter_dc_voltage.labels(v[0], array).set(v[7]/1000.0)
+          inverter_dc_current.labels(v[0], array).set(v[8]/1000.0)
+          inverter_ac_voltage.labels(v[0], array).set(v[9]/1000.0)
+          inverter_ac_power.labels(v[0], array).set(v[10])
+        else:
+          # old data, remove metrics
+          try:
+            inverter_temperature.remove(v[0], array)
+          except KeyError:
+            pass
+          try:
+            inverter_dc_voltage.remove(v[0], array)
+          except KeyError:
+            pass
+          try:
+            inverter_dc_current.remove(v[0], array)
+          except KeyError:
+            pass
+          try:
+            inverter_ac_voltage.remove(v[0], array)
+          except KeyError:
+            pass
+          try:
+            inverter_ac_power.remove(v[0], array)
+          except KeyError:
+            pass
     if not dataReceived:
       up.set(0)
 
