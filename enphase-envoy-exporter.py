@@ -49,6 +49,7 @@ if __name__ == '__main__':
     use_enlighten_owner_token=False,
     inverters=True,
   )
+  cleared = time.time()
   while True:
     dataReceived = False
     # Update Envoy data endpoints
@@ -74,6 +75,18 @@ if __name__ == '__main__':
         envoy_production._value.set(p['whLifetime'])
         envoy_active.set(p['activeCount'])
         envoy_readingtime.set(p['readingTime'])
+    # Once a day after midnight, clear all inverter metrics
+    now = time.time()
+    if now - cleared > 14400 and now % 86400 < 3600:
+      logging.info('Clearing inverter metrics')
+      cleared = now
+      inverter_power.clear()
+      inverter_ac_power.clear()
+      inverter_ac_voltage.clear()
+      inverter_dc_voltage.clear()
+      inverter_dc_current.clear()
+      inverter_temperature.clear()
+      inverter_lastreport.clear()
     # Get inverter production data
     try:
       data = ER.endpoint_production_inverters.json()
@@ -81,7 +94,6 @@ if __name__ == '__main__':
       data = {}
     if data:
       dataReceived = True
-      now = time.time()
       up.set(1)
       updated.set(now)
       for i in data:
