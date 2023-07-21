@@ -198,7 +198,7 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
         )
         setattr(self, attr, response)
 
-    async def _async_fetch_with_retry(self, url, **kwargs):
+    async def _async_fetch_with_retry(self, url, retry=True, **kwargs):
         """Retry 3 times to fetch the url if there is a transport error."""
         for attempt in range(3):
             _LOGGER.debug(
@@ -214,7 +214,7 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
                     resp = await client.get(
                         url, headers=self._authorization_header, timeout=30, **kwargs
                     )
-                    if resp.status_code == 401 and attempt < 2:
+                    if resp.status_code == 401 and attempt < 2 and retry:
                         _LOGGER.debug(
                             "Received 401 from Envoy; refreshing token, attempt %s of 2",
                             attempt+1,
@@ -334,7 +334,8 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
 
         # Fetch the Enphase Token status from the local Envoy
         token_validation_html = await self._async_fetch_with_retry(
-            ENDPOINT_URL_CHECK_JWT.format(self.host)
+            ENDPOINT_URL_CHECK_JWT.format(self.host),
+            retry=False
         )
 
         # Parse the HTML return from Envoy and check the text
