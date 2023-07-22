@@ -340,7 +340,8 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
 
         # Parse the HTML return from Envoy and check the text
         soup = BeautifulSoup(token_validation_html.text, features="html.parser")
-        token_validation = soup.find("h2").contents[0]
+        h2 = soup.find("h2")
+        token_validation = h2.contents[0] if hasattr(h2, "contents") else None
         if self._is_enphase_token_valid(token_validation) :
             # set the cookies for future clients
             self._cookies = token_validation_html.cookies
