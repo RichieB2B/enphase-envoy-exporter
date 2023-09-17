@@ -11,32 +11,8 @@ import argparse
 from envoy_reader import EnvoyReader
 import config
 
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser('Enphase Envoy Exporter')
-  parser.add_argument('-d', '--debug', action='store_true')
-  parser.add_argument('-p', '--port', type=int, default=8085)
-  args = parser.parse_args()
-  if args.debug:
-    level=logging.DEBUG
-  else:
-    level=logging.INFO
-  logging.basicConfig(level=level)
 
-  envoy_power         = prom.Gauge('envoy_power'              , 'Power in Watt', unit='watts')
-  envoy_production    = prom.Counter('envoy_production'       , 'Production in Wh', unit='whs')
-  envoy_active        = prom.Gauge('envoy_active'             , 'Number of active inverters', unit='count')
-  envoy_readingtime   = prom.Gauge('envoy_readingtime'        , 'Time of reading')
-  inverter_power      = prom.Gauge('envoy_inverter_power'     , 'Power in Watt', ['serialnumber', 'array', 'type'], unit='watts')
-  inverter_ac_power   = prom.Gauge('envoy_inverter_ac_power'  , 'Power in Watt', ['serialnumber', 'array'], unit='watts')
-  inverter_ac_voltage = prom.Gauge('envoy_inverter_ac_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
-  inverter_dc_voltage = prom.Gauge('envoy_inverter_dc_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
-  inverter_dc_current = prom.Gauge('envoy_inverter_dc_current', 'Current in Ampere', ['serialnumber', 'array'], unit='ampere')
-  inverter_temperature= prom.Gauge('envoy_inverter_temperature','Temperature in Celsius', ['serialnumber', 'array'], unit='celsius')
-  inverter_lastreport = prom.Gauge('envoy_inverter_lastreport', 'Time in epoch', ['serialnumber', 'array'])
-  updated             = prom.Gauge('envoy_updated'            , 'Envoy client last updated')
-  up                  = prom.Gauge('envoy_up'                 , 'Envoy client status')
-  prom.start_http_server(args.port)
-
+async def main():
   # Initialize EnvoyReader
   ER = EnvoyReader(
     host = config.host,
@@ -53,7 +29,7 @@ if __name__ == '__main__':
   while True:
     dataReceived = False
     # Update Envoy data endpoints
-    asyncio.run(ER.getData())
+    await ER.getData()
     # Get general production data
     try:
       data = ER.endpoint_production_json_results.json()
@@ -124,7 +100,8 @@ if __name__ == '__main__':
       for v in values:
         logging.debug(f'devstatus value = {v}')
         array = config.arrays.get(v[0], 'unknown')
-        if now - v[5] < 1800:
+        if v[1] == 1 and now - v[5] < 1800:
+          logging.debug('Inverter devstatus is recent')
           inverter_temperature.labels(v[0], array).set(v[6])
           inverter_dc_voltage.labels(v[0], array).set(v[7]/1000.0)
           inverter_dc_current.labels(v[0], array).set(v[8]/1000.0)
@@ -156,3 +133,31 @@ if __name__ == '__main__':
       up.set(0)
 
     time.sleep(30)
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser('Enphase Envoy Exporter')
+  parser.add_argument('-d', '--debug', action='store_true')
+  parser.add_argument('-p', '--port', type=int, default=8085)
+  args = parser.parse_args()
+  if args.debug:
+    level=logging.DEBUG
+  else:
+    level=logging.INFO
+  logging.basicConfig(level=level)
+
+  envoy_power         = prom.Gauge('envoy_power'              , 'Power in Watt', unit='watts')
+  envoy_production    = prom.Counter('envoy_production'       , 'Production in Wh', unit='whs')
+  envoy_active        = prom.Gauge('envoy_active'             , 'Number of active inverters', unit='count')
+  envoy_readingtime   = prom.Gauge('envoy_readingtime'        , 'Time of reading')
+  inverter_power      = prom.Gauge('envoy_inverter_power'     , 'Power in Watt', ['serialnumber', 'array', 'type'], unit='watts')
+  inverter_ac_power   = prom.Gauge('envoy_inverter_ac_power'  , 'Power in Watt', ['serialnumber', 'array'], unit='watts')
+  inverter_ac_voltage = prom.Gauge('envoy_inverter_ac_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
+  inverter_dc_voltage = prom.Gauge('envoy_inverter_dc_voltage', 'Voltage in Volt', ['serialnumber', 'array'], unit='volt')
+  inverter_dc_current = prom.Gauge('envoy_inverter_dc_current', 'Current in Ampere', ['serialnumber', 'array'], unit='ampere')
+  inverter_temperature= prom.Gauge('envoy_inverter_temperature','Temperature in Celsius', ['serialnumber', 'array'], unit='celsius')
+  inverter_lastreport = prom.Gauge('envoy_inverter_lastreport', 'Time in epoch', ['serialnumber', 'array'])
+  updated             = prom.Gauge('envoy_updated'            , 'Envoy client last updated')
+  up                  = prom.Gauge('envoy_up'                 , 'Envoy client status')
+  prom.start_http_server(args.port)
+
+  asyncio.run(main())
