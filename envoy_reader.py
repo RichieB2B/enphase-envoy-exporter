@@ -172,9 +172,6 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
             "endpoint_ensemble_json_results", ENDPOINT_URL_ENSEMBLE_INVENTORY
         )
         await self._update_endpoint(
-            "endpoint_devstatus_json_results", ENDPOINT_URL_PEB_DEVSTATUS
-        )
-        await self._update_endpoint(
             "endpoint_home_json_results", ENDPOINT_URL_HOME_JSON
         )
 
@@ -182,6 +179,9 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
         """Update from P endpoint."""
         await self._update_endpoint(
             "endpoint_production_v1_results", ENDPOINT_URL_PRODUCTION_V1
+        )
+        await self._update_endpoint(
+            "endpoint_devstatus_json_results", ENDPOINT_URL_PEB_DEVSTATUS
         )
 
     async def _update_from_p0_endpoint(self):
@@ -404,6 +404,7 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
 
         if not self.endpoint_type:
             await self.detect_model()
+            _LOGGER.debug(f"Model detected: {self.endpoint_type}")
         else:
             await self._update()
 

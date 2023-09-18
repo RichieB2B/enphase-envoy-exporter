@@ -2,6 +2,7 @@
 import sys
 import time
 import json
+from json.decoder import JSONDecodeError
 import prometheus_client as prom
 import logging
 import asyncio
