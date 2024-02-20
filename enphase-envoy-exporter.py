@@ -30,7 +30,11 @@ async def main():
   while True:
     dataReceived = False
     # Update Envoy data endpoints
-    await ER.getData()
+    try:
+      await ER.getData()
+    except RuntimeError as e:
+      print(f'{type(e).__name__}: {str(e)}')
+      sys.exit(1)
     # Get general production data
     try:
       data = ER.endpoint_production_json_results.json()
