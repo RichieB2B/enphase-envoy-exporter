@@ -7,11 +7,16 @@ import prometheus_client as prom
 import logging
 import asyncio
 import argparse
+import httpx
 
 # local imports
 from envoy_reader import EnvoyReader
 import config
 
+catchExceptions = (
+  httpx.ReadTimeout,
+  RuntimeError,
+)
 
 async def main():
   # Initialize EnvoyReader
@@ -32,7 +37,7 @@ async def main():
     # Update Envoy data endpoints
     try:
       await ER.getData()
-    except RuntimeError as e:
+    except catchExceptions as e:
       print(f'{type(e).__name__}: {str(e)}')
       sys.exit(1)
     # Get general production data
