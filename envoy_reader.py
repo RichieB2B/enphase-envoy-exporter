@@ -181,6 +181,9 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
             "endpoint_production_v1_results", ENDPOINT_URL_PRODUCTION_V1
         )
         await self._update_endpoint(
+            "endpoint_production_json_results", ENDPOINT_URL_PRODUCTION_JSON
+        )
+        await self._update_endpoint(
             "endpoint_devstatus_json_results", ENDPOINT_URL_PEB_DEVSTATUS
         )
 
@@ -442,6 +445,16 @@ class EnvoyReader:  # pylint: disable=too-many-instance-attributes
             await self._update_from_pc_endpoint()
         except httpx.HTTPError:
             pass
+
+        # Print some debug info
+        if self.endpoint_production_json_results:
+            _LOGGER.debug(f"endpoint_production_json_results.status_code{self.endpoint_production_json_results.status_code}")
+            if self.endpoint_production_json_results.status_code == 200:
+                _LOGGER.debug(self.endpoint_production_json_results.json())
+                prod_and_cons = has_production_and_consumption(self.endpoint_production_json_results.json())
+                _LOGGER.debug(f"has_production_and_consumption = {prod_and_cons}")
+                if prod_and_cons:
+                    _LOGGER.debug(f"has_metering_setup = {has_metering_setup(self.endpoint_production_json_results.json())}")
 
         # If self.endpoint_production_json_results.status_code is set with
         # 401 then we will give an error
