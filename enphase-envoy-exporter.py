@@ -7,7 +7,7 @@ import prometheus_client as prom
 import logging
 import asyncio
 import argparse
-from httpx import ConnectTimeout, ReadTimeout
+from httpx import ConnectTimeout, ConnectError, ReadTimeout
 
 # local imports
 from envoy_reader import EnvoyReader
@@ -15,6 +15,7 @@ import config
 
 catchExceptions = (
   ConnectTimeout,
+  ConnectError,
   ReadTimeout,
   RuntimeError,
 )
